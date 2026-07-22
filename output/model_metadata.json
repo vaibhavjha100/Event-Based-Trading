@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "type": "sklearn_return_model",
+  "target": "ret_SPY_60m",
+  "prediction_kind": "continuous_return",
+  "feature_columns": [
+    "surprise",
+    "VIX_Tminus1",
+    "prior_5d_SPY_return",
+    "regime_HIGH_INFLATION",
+    "regime_NORMAL",
+    "regime_EASING",
+    "regime_TIGHTENING",
+    "event_type_CPI",
+    "event_type_FOMC",
+    "event_type_FED_CUTS",
+    "event_type_NFP",
+    "PMPS_pre_Kalshi",
+    "PMPS_pre_Polymarket",
+    "Delta_mean_pre",
+    "Delta_variance_pre",
+    "Delta_skew_pre",
+    "PMPS_pre_weighted_Kalshi",
+    "PMPS_pre_weighted_Polymarket",
+    "delta_volume_pre_Kalshi",
+    "delta_volume_pre_Polymarket",
+    "delta_oi_pre_Kalshi"
+  ],
+  "thresholds": {
+    "tau": 0.00214067132881739,
+    "tau_rule": "max(1e-06, 0.5 * std(yhat_train))",
+    "long": "yhat >= +tau",
+    "short": "yhat <= -tau",
+    "neutral": "otherwise"
+  },
+  "train_period": {
+    "end_before": "2024-10-10 13:31:00+00:00",
+    "n_rows": 119
+  },
+  "val_period": {
+    "note": "Hyperparameters tuned via expanding-window CV on train only; no separate held-out val set exported."
+  },
+  "test_period": {
+    "start_at": "2024-10-10 13:31:00+00:00",
+    "n_rows": 40,
+    "walkforward_mode": "expanding_refit_fixed_hparams",
+    "label": "historical_walkforward_test"
+  },
+  "preprocessing_included": true,
+  "package_versions": {
+    "numpy": "2.4.3",
+    "pandas": "3.0.1",
+    "scikit-learn": "1.8.0",
+    "lightgbm": "4.6.0"
+  },
+  "timezone": "UTC",
+  "generated_at": "2026-07-22T11:28:36.070340+00:00",
+  "methodology_config": {
+    "config_id": "M3",
+    "estimator_name": "gbdt",
+    "entry_exit": "event window aligned to target (t0-5 -> t0+60)",
+    "transaction_costs": "none",
+    "walkforward_mode": "expanding_refit_fixed_hparams",
+    "selection_score": 0.7317631770037605
+  },
+  "estimator_name": "gbdt",
+  "config_id": "M3",
+  "model_id": "M3_gbdt",
+  "walkforward_mode": "expanding_refit_fixed_hparams",
+  "selection_reason": "Selected M3_gbdt with selection_score=0.7318 (dir_acc=0.9, sharpe_clipped=0.5358927490161004, r2_clipped=0.7368028593925009, n_trades=24, cum_ret=0.1688248823385725, rmse=0.002671434635491488). Trade filter applied. Among models with n_trades >= 5: score = 0.40 * directional_accuracy + 0.35 * sharpe_like_clipped + 0.25 * r2_clipped; if none qualify, drop trade filter. Tie-break: higher cumulative_return, then lower RMSE. Thresholds from train-only predictions; walkforward_mode=expanding_refit_fixed_hparams.",
+  "selection_rule": "Among models with n_trades >= 5: score = 0.40 * directional_accuracy + 0.35 * sharpe_like_clipped + 0.25 * r2_clipped; if none qualify, drop trade filter. Tie-break: higher cumulative_return, then lower RMSE. Thresholds from train-only predictions; walkforward_mode=expanding_refit_fixed_hparams."
+}
