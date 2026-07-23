@@ -47,11 +47,12 @@ The Website uses the frozen artifacts in `website/data/`, including:
 ## Local Website Run
 
 ```bash
-cd website
+git clone https://github.com/vaibhavjha100/Event-Based-Trading.git
+cd Event-Based-Trading
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install -r requirements.txt
-streamlit run app.py
+python3 -m pip install -r website/requirements.txt
+streamlit run website/app.py
 ```
 
 ## Public Deployment

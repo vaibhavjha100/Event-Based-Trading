@@ -69,7 +69,7 @@ def demo_signals() -> pd.DataFrame:
     dates = pd.date_range("2024-10-01", "2024-12-31", freq="D")
     rows: list[dict] = []
     specs = [
-        ("CPI", "Will US CPI exceed 3.0%?", "QQQ", 0.44, 0.07),
+        ("CPI", "Will US CPI exceed 3.0%?", "SPY", 0.44, 0.07),
         ("Fed", "Will the Fed keep rates above 5%?", "SPY", 0.56, -0.05),
     ]
     for i, (category, title, asset, base, drift) in enumerate(specs):

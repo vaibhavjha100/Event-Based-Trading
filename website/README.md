@@ -68,10 +68,10 @@ Requirements:
 
 ```bash
 git clone <TEAM_REPOSITORY_URL>
-cd team_prosper_website
+cd Event-Based-Trading
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install -r requirements.txt
+python3 -m pip install -r website/requirements.txt
 ```
 
 ## Environment setup
@@ -90,7 +90,7 @@ refreshes may use the environment variables documented in `.env.example`.
 ## Run
 
 ```bash
-streamlit run app.py
+streamlit run website/app.py
 ```
 
 Open `http://localhost:8501`.
@@ -194,4 +194,4 @@ used. AI-generated text and code require team review before submission.
 - Data and Modelling Lead - data pipeline, model and backtest
 - Driscoll - Website, integration, deployment and demonstration
 
-See `docs/SUBMISSION_CHECKLIST.md` for contribution and AI-disclosure templates.
+Contribution statements and AI disclosure are included in the final written report appendix.

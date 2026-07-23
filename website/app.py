@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+APP_DIR = Path(__file__).resolve().parent
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
+
 from src.data_loader import load_data
 
 
-APP_DIR = Path(__file__).resolve().parent
 DATA_DIR = APP_DIR / "data"
 
 st.set_page_config(
