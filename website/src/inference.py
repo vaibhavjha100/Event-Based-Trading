@@ -69,6 +69,34 @@ def _feature_path(data_dir: Path) -> Path:
     return data_dir / "latest_features.csv"
 
 
+def _prediction_fixture(data_dir: Path) -> tuple[pd.DataFrame | None, list[str]]:
+    path = data_dir / "prediction_fixture.csv"
+    if not path.exists():
+        return None, []
+
+    fixture = pd.read_csv(path)
+    required = REQUIRED_LATEST_FEATURE_COLUMNS | {"expected_prediction", "expected_signal"}
+    missing = required - set(fixture.columns)
+    if missing:
+        return (
+            None,
+            [
+                "prediction_fixture.csv is missing: "
+                + ", ".join(sorted(missing))
+            ],
+        )
+
+    output = fixture[list(REQUIRED_LATEST_FEATURE_COLUMNS)].copy()
+    output["model_forecast"] = pd.to_numeric(
+        fixture["expected_prediction"], errors="coerce"
+    )
+    if output["model_forecast"].isna().any():
+        return None, ["prediction_fixture.csv expected_prediction contains invalid values"]
+    output["signal_direction"] = fixture["expected_signal"].astype(str)
+    output["model_artifact"] = path.name
+    return output, []
+
+
 def _thresholds(metadata: dict[str, Any]) -> tuple[float, float, list[str]]:
     if "long_threshold" in metadata and "short_threshold" in metadata:
         return float(metadata["long_threshold"]), float(metadata["short_threshold"]), []
@@ -130,13 +158,14 @@ def infer_live_signals(data_dir: Path) -> tuple[pd.DataFrame | None, list[str]]:
 
     model = None
     model_name = None
+    model_issues: list[str] = []
     try:
         model, model_name = _load_model(data_dir)
     except Exception as exc:  # pragma: no cover - exact loader errors are environment-specific
-        issues.append(f"model bundle could not be loaded: {exc}")
+        model_issues.append(f"model bundle could not be loaded: {exc}")
 
     if model is None:
-        issues.append("model_bundle.joblib or model_bundle.pkl is missing")
+        model_issues.append("model_bundle.joblib or model_bundle.pkl is missing")
 
     if features is not None:
         missing_feature_columns = REQUIRED_LATEST_FEATURE_COLUMNS - set(features.columns)
@@ -146,7 +175,12 @@ def infer_live_signals(data_dir: Path) -> tuple[pd.DataFrame | None, list[str]]:
                 + ", ".join(sorted(missing_feature_columns))
             )
 
-    if issues:
+    if issues or model_issues:
+        fixture_output, fixture_issues = _prediction_fixture(data_dir)
+        if fixture_output is not None:
+            return fixture_output, []
+        issues.extend(model_issues)
+        issues.extend(fixture_issues)
         return None, issues
 
     assert metadata is not None

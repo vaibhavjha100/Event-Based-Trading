@@ -20,7 +20,7 @@ trades.
 - Structured market-classification agent with human-review guardrails
 - Explicit disclosure that the current model includes macro surprise and should be interpreted as event-window evidence
 - Data-quality, ethics, limitations and user-testing evidence
-- Visible model version, data timestamp and demo/validated-output status
+- Visible model version, data timestamp and frozen-artifact/demo status
 - Graceful fallback when required model, feature or backtest artifacts are missing or malformed
 
 ## Research design
@@ -48,7 +48,7 @@ The core model ladder is:
 3. M2: M1 plus distribution moments; current selected website model is `M2_ols`
 4. M3: liquidity-weighted robustness extension
 
-Data confirmed that model selection uses:
+Data confirmed that model evaluation uses:
 
 ```text
 selection_score = 0.40 * directional_accuracy
@@ -56,8 +56,9 @@ selection_score = 0.40 * directional_accuracy
                 + 0.25 * r2_clipped
 ```
 
-Models are re-estimated using an expanding window. The held-out period is never
-used for feature, threshold or model selection.
+Models are re-estimated using an expanding window. The website freezes `M2_ols`
+as the main specification because it matches the OLS finance methodology and is
+more interpretable than the higher-scoring tree robustness model.
 
 ## Installation
 
@@ -101,12 +102,10 @@ Open `http://localhost:8501`.
 2. Filter to `CPI` or `FOMC` and `SPY`.
 3. Select a market and confirm the adverse probability, direction and scenario timestamp.
 4. Open **Methodology** to see why the current model is labelled event-window.
-5. Open **Backtest** to inspect the selected `M2_ols` model and its baseline.
+5. Open **Backtest** to inspect the selected `M2_ols` model, the `M0_ols`
+   baseline and the exported model-comparison table.
 6. Open **Data & Limitations** to review data QA, ethical controls and the claim
    boundary.
-
-Screenshots will be added after the final validated data and public deployment
-are frozen.
 
 ## Data artifacts
 
@@ -118,13 +117,24 @@ read a precomputed `live_signals.csv` or run inference from:
 - `data/model_bundle.joblib` or `data/model_bundle.pkl`
 - `data/simulation_assumptions.md`
 
+If the local Python environment cannot load the model bundle, the app uses
+`data/prediction_fixture.csv` as a frozen prediction fixture rather than falling
+back to unrelated demo values.
+
 Backtest display still requires:
 
 - `data/cumulative_returns.csv`
 - `data/model_metrics.json`
 
-The app displays a prominent demo warning if any required file or field is
-missing. Demo values must never be reported as empirical findings.
+The app displays a prominent demo warning only if required model, fixture,
+performance and metric artifacts are all unavailable. Demo values must never be
+reported as empirical findings.
+
+## Screenshots
+
+![Overview dashboard](docs/screenshots/overview.png)
+
+Additional verification screenshots are saved in `docs/screenshots/`.
 
 ## Architecture
 
@@ -170,9 +180,9 @@ in the UI layer.
 - Scenario rows are simulated for website-side inference demonstration; empirical claims come from historical walk-forward backtest artifacts.
 - Data confirmed SPY-only scope for the current output.
 - Data confirmed the exported backtest assumes nil transaction costs and no slippage.
-- Data confirmed the website should use `M2_ols` because it has the second-highest selection score and avoids native deployment risk.
+- Data confirmed the website should use `M2_ols`; `M3_gbdt` has a higher exported selection score, so the report should explain the interpretability and methodology reason for freezing the OLS model.
 - Data confirmed `surprise` is not available at the present release decision time, so the current model is event-window evidence rather than a fully pre-release trading model.
-- Public deployment URL, final screenshots and user-testing summary are not yet added.
+- Public deployment must be verified in an anonymous browser session before submission.
 
 ## Planned enhancements
 

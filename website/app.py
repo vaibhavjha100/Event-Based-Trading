@@ -69,6 +69,10 @@ st.markdown(
     .status-demo { color: var(--amber); font-weight: 700; }
     .small-label { color: var(--muted); font-size: 0.8rem; }
     div[data-testid="stDataFrame"] { border: 1px solid var(--line); }
+    [data-testid="stToolbar"], [data-testid="stDecoration"], #MainMenu, footer {
+        visibility: hidden;
+        height: 0;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -80,7 +84,16 @@ def cached_load_data() -> tuple[pd.DataFrame, pd.DataFrame, dict, bool, list[str
     return load_data(DATA_DIR)
 
 
+@st.cache_data
+def cached_model_comparison() -> pd.DataFrame:
+    path = DATA_DIR / "model_comparison.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
 signals, performance, metrics, is_demo, data_issues = cached_load_data()
+model_comparison = cached_model_comparison()
 
 
 def list_text(values: list[str]) -> str:
@@ -88,8 +101,24 @@ def list_text(values: list[str]) -> str:
     return ", ".join(cleaned) if cleaned else "Not supplied"
 
 
+def date_window_text(frame: pd.DataFrame, column: str, unit: str) -> str:
+    if frame.empty or column not in frame:
+        return "Not supplied"
+    dates = pd.to_datetime(frame[column], errors="coerce").dropna()
+    if dates.empty:
+        return "Not supplied"
+    return f"{dates.min().date()} to {dates.max().date()} ({len(frame)} {unit})"
+
+
 asset_text = list_text(sorted(signals["target_asset"].dropna().unique().tolist()))
 category_text = list_text(sorted(signals["category"].dropna().unique().tolist()))
+evaluation_window = date_window_text(performance, "date", "events")
+scenario_window = date_window_text(signals, "date", "scenario rows")
+model_scope = (
+    f"{metrics.get('model_version', 'Model not supplied')} / "
+    f"{metrics.get('target_variable', 'Target not supplied')} / {asset_text}"
+)
+artifact_source = "Frozen model artifacts plus simulated Kalshi-style scenario rows"
 cost_bps = int(metrics.get("transaction_cost_bps", 0))
 cost_note = (
     "No transaction costs included"
@@ -110,7 +139,7 @@ def page_header(eyebrow: str, title: str, description: str) -> None:
 
 
 def provenance() -> None:
-    status = "DEMO" if is_demo else "VALIDATED OUTPUT"
+    status = "DEMO FALLBACK" if is_demo else "FROZEN ARTIFACTS"
     css = "status-demo" if is_demo else "status-live"
     st.divider()
     st.markdown(
@@ -140,11 +169,15 @@ with st.sidebar:
     )
     st.divider()
     st.caption("Evaluation window")
-    st.write(metrics.get("test_period", "Not supplied"))
+    st.write(evaluation_window)
+    st.caption("Scenario rows")
+    st.write(scenario_window)
+    st.caption("Model / target")
+    st.write(model_scope)
     st.caption("Target assets")
     st.write(asset_text)
     st.caption("Primary source")
-    st.write(metrics.get("source", "Not supplied"))
+    st.write(artifact_source)
     if is_demo:
         st.warning("Demo outputs are shown until validated team files are supplied.")
         with st.expander("Data contract status"):
@@ -154,9 +187,9 @@ with st.sidebar:
 
 if page == "Overview":
     page_header(
-        "Out-of-sample research dashboard",
+        "Frozen model demonstration",
         "Do prediction-market features improve event-window equity forecasts?",
-        f"The confirmed handoff is an event-window model for {metrics.get('target_variable', 'the exported target')}. It uses {asset_text} and {category_text} scenario categories, with simulated rows for the website inference demo.",
+        f"The website runs inference from the exported {metrics.get('model_version', 'model')} artifact on {metrics.get('target_variable', 'the exported target')}. It displays {asset_text} output and the exported scenario categories ({category_text}) using simulated rows for the website demo.",
     )
 
     c1, c2, c3, c4 = st.columns(4)
@@ -167,7 +200,7 @@ if page == "Overview":
 
     left, right = st.columns([1.7, 1])
     with left:
-        st.subheader("Out-of-sample cumulative performance")
+        st.subheader("Exported walk-forward performance")
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=performance["date"], y=performance["strategy"], name="Strategy", line=dict(color="#087f5b", width=2.5)))
         fig.add_trace(go.Scatter(x=performance["date"], y=performance["benchmark"], name="Benchmark", line=dict(color="#6c757d", width=2)))
@@ -179,7 +212,7 @@ if page == "Overview":
             """
             <div class="evidence">
             <b>Primary hypothesis</b><br>
-            Prediction-market probability features and macro surprise help forecast short-window SPY event returns. The incremental test is whether the selected model improves on the consensus-surprise baseline using the locked walk-forward sample.
+            Prediction-market probability features and macro surprise are tested as predictors of short-window SPY event returns. The incremental test compares the selected M2 OLS model with the M0 consensus-surprise baseline using the frozen walk-forward artifact.
             </div>
             """,
             unsafe_allow_html=True,
@@ -195,7 +228,8 @@ if page == "Overview":
         [
             ["Training", metrics.get("train_period", "Not supplied"), "Estimate model parameters"],
             ["Validation", metrics.get("validation_period", "Not supplied"), "Select fixed hyperparameters without using test outcomes"],
-            ["Testing", metrics.get("test_period", "Not supplied"), "Walk-forward evaluation only"],
+            ["Testing", evaluation_window, "Walk-forward evaluation artifact"],
+            ["Scenario inference", scenario_window, "Website-side simulated input demonstration"],
         ],
         columns=["Split", "Exported period", "Permitted use"],
     )
@@ -263,9 +297,9 @@ elif page == "Scenario Signals":
 
 elif page == "Backtest":
     page_header(
-        "Locked test-period evaluation",
+        "Frozen evaluation artifact",
         "Performance, robustness and model-selection evidence",
-        "The backtest reports statistical fit, directional accuracy and strategy output under the exported nil-cost assumption, with chronological walk-forward evaluation.",
+        "The backtest reports statistical fit, directional accuracy and strategy output under the exported nil-cost assumption, using the chronological walk-forward file supplied by the Data Lead.",
     )
     c1, c2, c3, c4 = st.columns(4)
     c1.metric(test_return_label, fmt_pct(metrics["strategy_return"]))
@@ -273,7 +307,7 @@ elif page == "Backtest":
     c3.metric("Hit rate", fmt_pct(metrics["hit_rate"]))
     c4.metric("Transaction cost", f"{cost_bps} bps / trade")
 
-    tab1, tab2, tab3, tab4 = st.tabs(["Performance", "Drawdown", "Model evidence", "Ablation plan"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Performance", "Drawdown", "Model comparison", "Ablation plan"])
     with tab1:
         fig = px.line(performance, x="date", y=["strategy", "benchmark"], color_discrete_map={"strategy": "#087f5b", "benchmark": "#6c757d"})
         fig.update_layout(yaxis_title="Growth of 100", xaxis_title=None, legend_title=None, legend_orientation="h", height=440)
@@ -292,10 +326,45 @@ elif page == "Backtest":
             columns=["Specification", "Target", "Held-out score", "Purpose"],
         )
         st.dataframe(evidence, width="stretch", hide_index=True)
+        if not model_comparison.empty:
+            st.subheader("Exported model-selection table")
+            preferred_cols = [
+                "model_id",
+                "config_id",
+                "estimator_name",
+                "selection_score",
+                "directional_accuracy",
+                "sharpe_like",
+                "r2",
+                "rmse",
+                "cumulative_return",
+                "n_trades",
+                "selected",
+            ]
+            available_cols = [column for column in preferred_cols if column in model_comparison.columns]
+            comparison_view = model_comparison[available_cols].copy()
+            for column in [
+                "selection_score",
+                "directional_accuracy",
+                "sharpe_like",
+                "r2",
+                "rmse",
+                "cumulative_return",
+            ]:
+                if column in comparison_view.columns:
+                    comparison_view[column] = pd.to_numeric(comparison_view[column], errors="coerce").round(4)
+            if "selected" in comparison_view.columns:
+                comparison_view["selected"] = comparison_view["selected"].map(
+                    lambda flag: "Selected" if str(flag).lower() == "true" else ""
+                )
+            if "selection_score" in comparison_view.columns:
+                comparison_view = comparison_view.sort_values("selection_score", ascending=False)
+            st.dataframe(comparison_view, width="stretch", hide_index=True)
+            st.caption("M2_ols is the frozen website model. M3_gbdt scores higher in the export but is not the chosen artifact, so the report should explain the stability and interpretability reason for using M2_ols.")
         st.markdown(
             """
             <div class="risk"><b>Interpretation rule</b><br>
-            The selected model is justified by the Data Lead selection score. Because surprise is not available before the release, the website should describe this as event-window evidence rather than a fully pre-release trading strategy.</div>
+            The website follows the frozen M2_ols handoff. Because surprise is not available before the release, the model should be described as event-window evidence rather than a fully pre-release trading strategy.</div>
             """,
             unsafe_allow_html=True,
         )
@@ -397,11 +466,11 @@ elif page == "Methodology":
     with i2:
         st.write("- Actual minus Consensus baseline")
         st.write("- VIX at T-1 and prior five-day index return")
-        st.write("- CPI/FOMC and day-of-week indicators")
+        st.write("- Exported event-type and day-of-week indicators")
         st.write("- Contract clustering or event-level aggregation")
 
     st.subheader("Model ladder")
-    st.write(f"Current website handoff displays {metrics.get('model_version', 'the exported model')} on {metrics.get('target_variable', 'the exported target')}. Data confirmed the selection score combines directional accuracy, clipped Sharpe-like performance and clipped R-squared.")
+    st.write(f"Current website handoff displays {metrics.get('model_version', 'the exported model')} on {metrics.get('target_variable', 'the exported target')}. Data confirmed the selection score combines directional accuracy, clipped Sharpe-like performance and clipped R-squared; M2_ols is treated as the frozen main specification for interpretability and consistency with the finance methodology.")
     ladder = pd.DataFrame(
         [
             ["M0", "OLS: consensus surprise + controls", "Required baseline"],
@@ -437,6 +506,8 @@ else:
                 ["Training events", metrics.get("n_train_events", "Not supplied")],
                 ["Test events", metrics.get("n_test_events", "Not supplied")],
                 ["Model artifacts scored", metrics.get("n_model_artifacts", "Not supplied")],
+                ["Evaluation window", evaluation_window],
+                ["Scenario rows", scenario_window],
                 ["Walk-forward mode", metrics.get("walkforward_mode", "Not supplied")],
                 ["Entry / exit", metrics.get("entry_exit", "Not supplied")],
                 ["Cost assumption", metrics.get("transaction_cost_note", cost_note)],
@@ -445,6 +516,7 @@ else:
             ],
             columns=["Item", "Value"],
         )
+        handoff["Value"] = handoff["Value"].astype(str)
         st.dataframe(handoff, width="stretch", hide_index=True)
 
         if metrics.get("selection_reason"):
@@ -453,7 +525,7 @@ else:
         st.subheader("Target data contract")
         coverage = pd.DataFrame(
             [
-                ["Prediction markets", "Kalshi / Polymarket-style probability features", "Historical backtest plus simulated scenario rows", "Contract rules, timestamped probability, volume and OI"],
+                ["Prediction markets", "Kalshi / Polymarket-style probability features", "Frozen evaluation artifact plus simulated scenario rows", "Contract rules, timestamped probability, volume and OI"],
                 ["Macro releases", "Official release + consensus source", category_text, "Release time, actual, consensus and surprise"],
                 ["Equity prices", "Approved intraday source", asset_text, "Timestamped index ETF bars matched to the event window"],
                 ["Controls", "Approved market source", "Historical walk-forward sample", "VIX T-1, prior five-day return, regime and event type"],
@@ -481,7 +553,7 @@ else:
                 ["Trading frictions", "The exported strategy uses no transaction costs or slippage.", "Label the result as nil-cost and avoid claiming after-cost profitability."],
                 ["Date range", "Data confirmed the simulated-data demo is no longer constrained by the earlier range.", "Disclose the exported walk-forward window and the simulated-row purpose."],
                 ["Asset scope", "Data confirmed SPY-only output.", "Do not claim QQQ evidence unless a separate rerun is supplied."],
-                ["Model selection", "Data confirmed M2_ols because it has the second-highest selection score and a stable runtime.", "Show the selection-score formula and model ID in the website provenance."],
+                ["Model selection", "M3_gbdt has the highest exported selection score while M2_ols is the frozen website model.", "Explain that the main specification favours OLS interpretability and finance-method consistency; show the comparison table instead of hiding the trade-off."],
             ],
             columns=["Risk", "Why it matters", "Mitigation / disclosure"],
         )

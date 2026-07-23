@@ -35,6 +35,10 @@ The Website uses the frozen artifacts in `website/data/`, including:
 - `cumulative_returns.csv`
 - `data_quality_summary.csv`
 
+## Screenshot
+
+![Website overview](website/docs/screenshots/overview.png)
+
 ## Current Model Scope
 
 - Selected Website model: `M2_ols`
@@ -57,6 +61,12 @@ streamlit run website/app.py
 
 ## Public Deployment
 
+Current deployed URL:
+
+```text
+https://event-based-trading-hdfpndzusns5yccjdkescj.streamlit.app/
+```
+
 Deploy on Streamlit Community Cloud with:
 
 - Repository: `vaibhavjha100/Event-Based-Trading`
@@ -65,6 +75,10 @@ Deploy on Streamlit Community Cloud with:
 
 Streamlit Community Cloud supports an app entrypoint in a subdirectory and can
 use the `requirements.txt` file located next to that entrypoint.
+
+Before submission, verify the deployed URL in an anonymous browser session. A
+public demo URL should load the app directly rather than redirecting to
+Streamlit authentication.
 
 ## Responsible Use
 
