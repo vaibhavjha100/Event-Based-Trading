@@ -1,0 +1,14 @@
+item,value
+walkforward_mode,expanding_refit_fixed_hparams
+primary_target,ret_SPY_60m
+n_train,119
+n_test,40
+split_boundary_release_time,2024-10-10 13:31:00+00:00
+n_artifacts_scored,12
+n_artifacts_skipped,0
+selected_model_id,M2_ols
+transaction_costs,none (documented assumption)
+entry_exit,t0-5 -> t0+60 aligned to ret_SPY_60m
+leakage_exclusions,"reaction_*, ret_*, actual_value; surprise joined by event_id only"
+test_period_label,historical_walkforward_test
+simulated_rows_label,demo_only_not_historical

@@ -61,3 +61,7 @@ Desktop.ini
 data/
 data.tar.zst
 rough.py
+
+# Website handoff artifacts for the final Streamlit app
+!website/data/
+!website/data/**
