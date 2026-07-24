@@ -11,6 +11,50 @@ The project has two linked parts:
 - `website/`: Streamlit application used for the final public demo, model
   inference display, methodology explanation and limitations disclosure.
 
+## ML Pipeline
+
+The research pipeline runs in this order:
+
+1. **Synthetic data generation** — builds a consistent synthetic event,
+   prediction-market, and equity dataset under `data/raw/`.
+2. **Data preprocessing** — cleans, classifies, and builds leakage-safe
+   signals under `data/cleaned/`.
+3. **ML training** — prepares a chronological train/test split, then trains
+   models and writes them under `models/`.
+4. **Backtesting** — walk-forward evaluation on held-out data; writes results
+   under `output/` (including website handoff artifacts).
+
+### Setup
+
+Install ML dependencies from the project root:
+
+```bash
+pip install -r requirements.txt
+```
+
+For Gemini-based classification during preprocessing, create a `.env` file in
+the project root (do not commit this file) and add your key:
+
+```bash
+GENAI_API_KEY=your_api_key_here
+```
+
+Replace `your_api_key_here` with your own Gemini API key. Never share or commit
+the real key. To run preprocessing without Gemini, use
+`python -m ml.run_preprocessing --skip-gemini`.
+
+### Run the full pipeline
+
+```bash
+python -m ml.generate_synthetic_data
+python -m ml.run_preprocessing
+python -m ml.prepare_ml_data
+python -m ml.train_models
+python -m ml.run_backtest
+```
+
+More detail for each stage is in the `ml/README_*.md` files.
+
 ## Final Website
 
 Streamlit entrypoint:
