@@ -16,6 +16,7 @@ from src.data_loader import load_data
 
 
 DATA_DIR = APP_DIR / "data"
+PLOT_CONFIG = {"displayModeBar": False, "responsive": True}
 
 st.set_page_config(
     page_title="Team Prosper | Macro Signal Lab",
@@ -205,7 +206,7 @@ if page == "Overview":
         fig.add_trace(go.Scatter(x=performance["date"], y=performance["strategy"], name="Strategy", line=dict(color="#087f5b", width=2.5)))
         fig.add_trace(go.Scatter(x=performance["date"], y=performance["benchmark"], name="Benchmark", line=dict(color="#6c757d", width=2)))
         fig.update_layout(yaxis_title="Growth of 100", xaxis_title=None, legend_orientation="h", margin=dict(l=10, r=10, t=10, b=10), height=410)
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, width="stretch", config=PLOT_CONFIG)
     with right:
         st.subheader("Research claim")
         st.markdown(
@@ -275,15 +276,42 @@ elif page == "Scenario Signals":
         selected = view.loc[view["market_title"] == selected_title].iloc[0]
         left, right = st.columns([1.6, 1])
         with left:
+            pmps_abs_max = pd.to_numeric(history["pmps_pre"], errors="coerce").abs().max()
+            pmps_axis_max = max(float(pmps_abs_max) * 1.35, 0.025)
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=history["date"], y=history["p_bad"], name="Adverse probability", line=dict(color="#0b7285", width=2.5)))
-            fig.add_trace(go.Bar(x=history["date"], y=history["pmps_pre"], name="PMPS pre-event", marker_color="#d9480f", yaxis="y2", opacity=0.5))
+            fig.add_trace(
+                go.Scatter(
+                    x=history["date"],
+                    y=history["p_bad"],
+                    name="Adverse probability",
+                    mode="lines+markers" if len(history) > 1 else "markers",
+                    marker=dict(color="#0b7285", size=9),
+                    line=dict(color="#0b7285", width=2.5),
+                )
+            )
+            fig.add_trace(
+                go.Bar(
+                    x=history["date"],
+                    y=history["pmps_pre"],
+                    name="PMPS pre-event",
+                    marker_color="#d9480f",
+                    yaxis="y2",
+                    opacity=0.42,
+                    width=None if len(history) > 1 else [12 * 60 * 60 * 1000],
+                )
+            )
             fig.update_layout(
-                yaxis=dict(title="Adverse probability", tickformat=".0%"),
-                yaxis2=dict(title="Daily change", tickformat=".1%", overlaying="y", side="right", showgrid=False),
+                yaxis=dict(title="Adverse probability", tickformat=".0%", range=[0, 1]),
+                yaxis2=dict(title="Daily change", tickformat=".1%", range=[-pmps_axis_max, pmps_axis_max], overlaying="y", side="right", showgrid=False),
                 legend_orientation="h", margin=dict(l=10, r=10, t=25, b=10), height=400,
             )
-            st.plotly_chart(fig, width="stretch")
+            if len(history) == 1:
+                center = pd.to_datetime(history["date"]).iloc[0]
+                fig.update_xaxes(
+                    range=[center - pd.Timedelta(days=3), center + pd.Timedelta(days=3)],
+                    tickformat="%b %d, %Y",
+                )
+            st.plotly_chart(fig, width="stretch", config=PLOT_CONFIG)
         with right:
             st.subheader("Signal audit")
             st.write(f"Direction: **{selected['signal_direction']} {selected['target_asset']}**")
@@ -311,11 +339,11 @@ elif page == "Backtest":
     with tab1:
         fig = px.line(performance, x="date", y=["strategy", "benchmark"], color_discrete_map={"strategy": "#087f5b", "benchmark": "#6c757d"})
         fig.update_layout(yaxis_title="Growth of 100", xaxis_title=None, legend_title=None, legend_orientation="h", height=440)
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, width="stretch", config=PLOT_CONFIG)
     with tab2:
         fig = px.area(performance, x="date", y="drawdown", color_discrete_sequence=["#c92a2a"])
         fig.update_layout(yaxis_title="Drawdown", yaxis_tickformat=".0%", xaxis_title=None, height=440)
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig, width="stretch", config=PLOT_CONFIG)
     with tab3:
         evidence = pd.DataFrame(
             [
